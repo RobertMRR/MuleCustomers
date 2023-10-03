@@ -1,0 +1,23 @@
+%dw 2.0
+
+type auto_ee066ba9_8094_4271_81a7_bc19dde8998c_Output_Payload = {
+  address?: {
+    country: String, 
+    city: String, 
+    street: String, 
+    postalCode: Number, 
+    houseNumber: Number, 
+    _?: Any
+  }, 
+  personalInformation: {
+    firstName: String, 
+    lastName: String, 
+    phone: Number, 
+    companyName: String, 
+    email: String, 
+    _?: Any
+  }, 
+  customerId: String, 
+  _?: Any
+}
+

@@ -1,0 +1,38 @@
+[
+{
+  "personalInformation": {
+    "firstName": "Ulrich",
+    "lastName": "Nielsen",
+    "companyName": "E-ffoc",
+    "email": "ulrichN@effoc.com",
+    "phone": "+494341927420"
+  },
+  "address": [
+    {
+      "street": "Steinbrueckstrasse",
+      "houseNumber": 114,
+      "city": "Nuremberg",
+      "country": "Germany",
+      "postalCode": "90408"
+    }
+  ]
+},
+{
+    "personalInformation": {
+      "firstName": "Robet",
+      "lastName": "Niasdasd",
+      "companyName": "E-fasdc",
+      "email": "uasdaschN@effoc.com",
+      "phone": "+4941231237420"
+    },
+    "address": [
+      {
+        "street": "Steinasdstrasse",
+        "houseNumber": 1234,
+        "city": "Nusadasrg",
+        "country": "Germasdany",
+        "postalCode": "90412308"
+      }
+    ]
+}
+]
