@@ -127,9 +127,9 @@ output application/json
 		<flow-ref doc:name="get_customer" doc:id="5e487581-82a3-4bdd-aaa0-72a615ae408a" name="get_customer"/>
     </flow>
     <flow name="post:\customers:application\json:first_project-config">
-        <flow-ref doc:name="create_customer" doc:id="0dfddc23-6bc7-42ce-9f58-52c525b86249" name="create_customer_db"/>
+        <flow-ref doc:name="create_customer" doc:id="0dfddc23-6bc7-42ce-9f58-52c525b86249" name="create_customer_final"/>
     </flow>
 	<flow name="put:\customers:application\json:first_project-config">
-		<flow-ref doc:name="Flow Reference" doc:id="5df22449-327e-499a-83f4-91d802ff046c" name="create_customer"/>
+		<flow-ref doc:name="Flow Reference" doc:id="5df22449-327e-499a-83f4-91d802ff046c" name="create_or_update_customer_salesforce"/>
     </flow>
 </mule>

@@ -40,14 +40,14 @@ output application/json
 			</ee:message>
 		</ee:transform>
 	</flow>
-	<flow name="create_customer" doc:id="b44db938-c644-4612-a0d3-c87275e0eab9" >
-		<ee:transform doc:name="Transform Message" doc:id="9a764ba4-a9e7-4bea-b4c6-ed0c7c8b8ffa" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
+	<flow name="create_or_update_customer_salesforce" doc:id="b44db938-c644-4612-a0d3-c87275e0eab9" >
+		<ee:transform doc:name="Transform Message" doc:id="9a764ba4-a9e7-4bea-b4c6-ed0c7c8b8ffa">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 [{
-	cust_id__c: lower(payload.personalInformation.firstName ++ payload.personalInformation.lastName[0]),
+	cust_id__c: payload.personalInformation.lastName[0 to 6] ++ payload.personalInformation.firstName[0],
 	Name: payload.personalInformation.firstName,
 	Type: payload.personalInformation.lastName,
 	Phone: payload.personalInformation.phone as String,
@@ -56,35 +56,118 @@ output application/json
 }]]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
-		<salesforce:upsert doc:name="Upsert" doc:id="1a9d4d1e-3bab-4e5e-ac3d-a0fd003df137" config-ref="Salesforce_Config" objectType="Account" externalIdFieldName="cust_id__c"/>
-		<ee:transform doc:name="Transform Message" doc:id="7bec074a-3df8-48f6-ae88-d2ae662f73c4" >
+		<salesforce:upsert doc:name="Upsert" doc:id="1a9d4d1e-3bab-4e5e-ac3d-a0fd003df137" config-ref="Salesforce_Config" objectType="Account" externalIdFieldName="cust_id__c" />
+		<ee:transform doc:name="Transform Message" doc:id="5e9ee55d-edda-461a-8808-b2eaa735791c" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
 output application/json
 ---
-payload]]></ee:set-payload>
+{
+	message: "User added to salesforce"
+}]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 	</flow>
-	<flow name="create_customer_db" doc:id="17c9e3b1-e63a-4f11-8a03-5a6620e9af48" >
-		<set-variable value="#[payload]" doc:name="pre_sql_query_payload" doc:id="1b511ea7-beac-4aea-9dba-d48e384103db" variableName="pre_sql_query" />
-		<set-variable value="#[payload.personalInformation.firstName ++ payload.personalInformation.lastName[0]]" doc:name="cust_id" doc:id="7d21c183-bf89-4b06-b76e-aa342776be52" variableName="cust_id"/>
-		<db:select doc:name="Select" doc:id="3d9f6f4f-fd6e-4ccc-acae-8ec81e3b1ad0" config-ref="Database_Config" targetValue="#[vars.]">
-			<db:sql ><![CDATA[SELECT * FROM customers.customers WHERE cust_id = :cust_id]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{cust_id: vars.cust_id}]]]></db:input-parameters>
+	<flow name="create_customer_final" doc:id="29724991-937f-4285-9140-1e1709079685" >
+		<set-variable value="#[payload.personalInformation.lastName[0 to 6] ++ payload.personalInformation.firstName[0]]" doc:name="cust_id" doc:id="7d21c183-bf89-4b06-b76e-aa342776be52" variableName="cust_id" />
+		<scatter-gather doc:name="Scatter-Gather" doc:id="60177c60-336c-4ce3-a3e4-ffdd4af7589e" >
+			<route >
+				<set-variable value='""' doc:name="query_results" doc:id="b62f2c19-224d-4edc-9060-03690176631f" variableName="query_results" />
+				<db:select doc:name="Select" doc:id="3d9f6f4f-fd6e-4ccc-acae-8ec81e3b1ad0" config-ref="Database_Config" target="query_results">
+			<db:sql><![CDATA[SELECT * FROM customers.customers WHERE cust_id = :cust_id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{cust_id: vars.cust_id}]]]></db:input-parameters>
 		</db:select>
-		<set-variable value="#[payload]" doc:name="query_result" doc:id="74642017-da7f-4cc5-83e3-fe072d914fea" variableName="query_result"/>
-		<set-payload value="#[vars.pre_sql_query]" doc:name="to pre sql query payload" doc:id="d0b1a12e-efe0-4247-bc5d-e005204e15c8" />
-		<choice doc:name="Choice" doc:id="5abdaaf1-114a-4de1-b1d0-8d6fa3bbd7e7" >
-			<when expression="#[isEmpty(vars.query_result)]">
-				<db:insert doc:name="Insert" doc:id="b3d39555-6472-4ecd-ae14-85bbc39c99f2" config-ref="Database_Config">
+				<choice doc:name="Choice" doc:id="54c1761a-f3f3-4dee-b595-670b686471d9" >
+					<when expression="#[isEmpty(vars.query_results)]">
+						<db:insert doc:name="Insert" doc:id="b3d39555-6472-4ecd-ae14-85bbc39c99f2" config-ref="Database_Config">
 			<db:sql><![CDATA[INSERT INTO customers (cust_id, firstName, lastName, companyName, email, phone, street, housenumber, city, country, postalCode) VALUES (:cust_id, :firstName, :lastName, :companyName, :email, :phone, :street, :houseNumber, :city, :country, :postalCode)]]></db:sql>
 			<db:input-parameters><![CDATA[#[{country: payload.address.country, city: payload.address.city, street: payload.address.street, postalCode: payload.address.postalCode, houseNumber: payload.address.houseNumber, firstName: payload.personalInformation.firstName, lastName: payload.personalInformation.lastName, phone: payload.personalInformation.phone, companyName: payload.personalInformation.companyName, email: payload.personalInformation.email, cust_id: vars.cust_id}]]]></db:input-parameters>
 		</db:insert>
-				<set-payload value="#[message: 'User created']" doc:name="Set Payload" doc:id="c0f2e8b2-e815-4c48-8211-dddaa797c957" />
+						<set-variable value='User created' doc:name="Set Variable" doc:id="dac1229c-d27f-459e-b9c2-c5da7fbf184c" variableName="added"/>
+					</when>
+					<otherwise >
+						<set-variable value="0" doc:name="Set Variable" doc:id="b1949678-5705-42bc-9e32-94643d7b1156" variableName="added"/>
+					</otherwise>
+				</choice>
+			</route>
+			<route >
+				<flow-ref doc:name="create_or_update_customer_salesforce" doc:id="744e3302-6cc9-4184-bf33-1b7681de7ce2" name="create_or_update_customer_salesforce"/>
+				<set-variable value="#[payload.message]" doc:name="Set Variable" doc:id="8caf700b-6b90-4941-bf5c-ff093ff76042" variableName="IsAddedSalesforce"/>
+				<logger level="INFO" doc:name="Logger" doc:id="6892f3ae-b567-4796-9d54-ffc8481d47e1" />
+			</route>
+		</scatter-gather>
+		<logger level="INFO" doc:name="Logger" doc:id="7ee017fb-d1a8-4fb9-b096-d187d1cef88d" />
+		<ee:transform doc:name="Transform Message" doc:id="bc1b6720-adfc-47a5-b0c2-09676be769e5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+var results = {
+	"sf": vars.IsAddedSalesforce,
+	"db": vars.added
+}
+
+output application/json
+---
+{
+	a: results.sf match {
+		case "User added to salesforce" -> true
+		else -> false
+	},
+	b: results.db match {
+		case "User created" -> true
+		else ->false
+	}
+	
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<choice doc:name="Choice" doc:id="0bfb1aa9-8da5-49bd-a14e-ce6753e208f2" >
+			<when expression="#[payload.a  and payload.b]">
+				<ee:transform doc:name="Transform Message" doc:id="e4b89179-afba-4fcc-b8a8-6a66a5a1dcd3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "User added in Salesforce and DB"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[payload.a and not payload.b]">
+				<ee:transform doc:name="Transform Message" doc:id="113a4c2c-ac7b-48d1-9a6a-45f009f3f0a3" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "User added only to salesforce"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<when expression="#[payload.b and not payload.a]">
+				<ee:transform doc:name="Transform Message" doc:id="94b86716-1ac7-4ee7-b241-52744949c761" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "User added only to DB"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
 			</when>
 			<otherwise >
-				<logger level="INFO" doc:name="Logger" doc:id="c8a9cdfb-7db0-4e07-889e-d14c33c4309d" message="Message: user exists"/>
+				<ee:transform doc:name="Transform Message" doc:id="0c4538f7-64be-4cc2-80b2-aa3af61c0091" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "User already exists"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
 			</otherwise>
 		</choice>
 	</flow>
